@@ -14,6 +14,19 @@ interface MatchPrediction {
   awayWinProb: number
   predictedWinner: "home" | "away" | "draw"
   confidence: number
+  odds: {
+    homeWin: number
+    draw: number
+    awayWin: number
+    over25: number
+    under25: number
+  }
+  stake: {
+    recommended: number
+    units: number
+    confidence: string
+  }
+  value: number
 }
 
 export async function POST(request: Request) {
@@ -73,6 +86,10 @@ ${
     ? `${goalsEmoji} **OVER 2.5** (${prediction.over25Pct}% - ${prediction.avgGoals} goles)`
     : `🛡️ **Partido cerrado** (${prediction.avgGoals} goles)`
 }
+💰 **CUOTAS:** 1️⃣${prediction.odds.homeWin} | ❌${prediction.odds.draw} | 2️⃣${prediction.odds.awayWin}
+⚽ **GOLES:** Over2.5 ${prediction.odds.over25} | Under2.5 ${prediction.odds.under25}
+🎯 **STAKE:** ${prediction.stake.recommended}/10 (${prediction.stake.units}u) - ${prediction.stake.confidence.toUpperCase()}
+📈 **VALOR:** ${prediction.value > 0 ? "+" : ""}${prediction.value}%
 
 `
       })

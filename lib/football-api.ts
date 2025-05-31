@@ -12,6 +12,19 @@ interface MatchPrediction {
   awayWinProb: number
   predictedWinner: "home" | "away" | "draw"
   confidence: number
+  odds: {
+    homeWin: number
+    draw: number
+    awayWin: number
+    over25: number
+    under25: number
+  }
+  stake: {
+    recommended: number // 1-10 scale
+    confidence: "low" | "medium" | "high"
+    units: number // betting units
+  }
+  value: number // expected value percentage
 }
 
 interface FootballMatch {
@@ -32,7 +45,7 @@ interface FootballMatch {
 
 export class FootballAPI {
   private static readonly BASE_URL = "https://v3.football.api-sports.io"
-  private static readonly API_KEY = process.env.FOOTBALL_API_KEY
+  private static readonly API_KEY = "tu_nueva_api_key_aqui"
 
   private static async makeRequest(url: string): Promise<any> {
     const controller = new AbortController()
@@ -206,8 +219,23 @@ export class FootballAPI {
       const secondMaxProb = [finalHome, finalAway, finalDraw].sort((a, b) => b - a)[1]
       const confidence = Math.min(maxProb + (maxProb - secondMaxProb) * 0.6, 88)
 
-      // Calcular estadísticas de goles únicas
+      // Calcular cuotas realistas basadas en probabilidades
+      const homeOdds = Number((100 / finalHome).toFixed(2))
+      const drawOdds = Number((100 / finalDraw).toFixed(2))
+      const awayOdds = Number((100 / finalAway).toFixed(2))
       const goalStats = this.calculateGoalStats(homeProfile, awayProfile, fixtureId)
+      const over25Odds = Number((100 / goalStats.over25Pct).toFixed(2))
+      const under25Odds = Number((100 / (100 - goalStats.over25Pct)).toFixed(2))
+
+      // Calcular stake recomendado basado en confianza
+      const stakeLevel = confidence >= 75 ? "high" : confidence >= 60 ? "medium" : "low"
+      const recommendedStake = confidence >= 75 ? 8 : confidence >= 60 ? 5 : 3
+      const bettingUnits = confidence >= 75 ? 3 : confidence >= 60 ? 2 : 1
+
+      // Calcular valor esperado
+      const expectedValue = Math.round((confidence - 100 / Math.max(homeOdds, drawOdds, awayOdds)) * 2)
+
+      // Calcular estadísticas de goles únicas
 
       // Convertir fecha a hora colombiana
       const matchDate = new Date(match.fixture.date)
@@ -231,6 +259,19 @@ export class FootballAPI {
         awayWinProb: finalAway,
         predictedWinner,
         confidence: Math.round(confidence),
+        odds: {
+          homeWin: homeOdds,
+          draw: drawOdds,
+          awayWin: awayOdds,
+          over25: over25Odds,
+          under25: under25Odds,
+        },
+        stake: {
+          recommended: recommendedStake,
+          confidence: stakeLevel,
+          units: bettingUnits,
+        },
+        value: Math.max(0, expectedValue),
       }
     } catch (error) {
       console.error("Error generating prediction:", error)
@@ -314,6 +355,9 @@ export class FootballAPI {
         awayWinProb: 6,
         predictedWinner: "home",
         confidence: 82,
+        odds: { homeWin: 1.22, draw: 6.5, awayWin: 15.0, over25: 1.15, under25: 5.2 },
+        stake: { recommended: 8, confidence: "high", units: 3 },
+        value: 12,
       },
       {
         homeTeam: "Everton",
@@ -329,6 +373,9 @@ export class FootballAPI {
         awayWinProb: 58,
         predictedWinner: "away",
         confidence: 58,
+        odds: { homeWin: 1.22, draw: 6.5, awayWin: 15.0, over25: 1.15, under25: 5.2 },
+        stake: { recommended: 8, confidence: "high", units: 3 },
+        value: 12,
       },
       {
         homeTeam: "Atalanta",
@@ -344,6 +391,9 @@ export class FootballAPI {
         awayWinProb: 34,
         predictedWinner: "home",
         confidence: 35,
+        odds: { homeWin: 1.22, draw: 6.5, awayWin: 15.0, over25: 1.15, under25: 5.2 },
+        stake: { recommended: 8, confidence: "high", units: 3 },
+        value: 12,
       },
       {
         homeTeam: "Getafe",
@@ -359,6 +409,9 @@ export class FootballAPI {
         awayWinProb: 66,
         predictedWinner: "away",
         confidence: 66,
+        odds: { homeWin: 1.22, draw: 6.5, awayWin: 15.0, over25: 1.15, under25: 5.2 },
+        stake: { recommended: 8, confidence: "high", units: 3 },
+        value: 12,
       },
       {
         homeTeam: "Hoffenheim",
@@ -374,6 +427,9 @@ export class FootballAPI {
         awayWinProb: 54,
         predictedWinner: "away",
         confidence: 54,
+        odds: { homeWin: 1.22, draw: 6.5, awayWin: 15.0, over25: 1.15, under25: 5.2 },
+        stake: { recommended: 8, confidence: "high", units: 3 },
+        value: 12,
       },
     ]
   }
