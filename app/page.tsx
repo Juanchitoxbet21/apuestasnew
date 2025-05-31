@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Switch } from "@/components/ui/switch"
-import { Clock, Send, RefreshCw, Bot, BarChart3, Target, Zap, Users, Trash2, AlertCircle } from "lucide-react"
+import { Clock, Send, RefreshCw, BarChart3, Target, Zap, Users, Trash2, AlertCircle, TrendingUp } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface MatchPrediction {
@@ -25,19 +25,8 @@ interface MatchPrediction {
   awayWinProb: number
   predictedWinner: "home" | "away" | "draw"
   confidence: number
-  odds: {
-    homeWin: number
-    draw: number
-    awayWin: number
-    over25: number
-    under25: number
-  }
-  stake: {
-    recommended: number
-    confidence: "low" | "medium" | "high"
-    units: number
-  }
-  value: number
+  bookmaker: string
+  isAvailableInStake: boolean
 }
 
 interface ChatConfig {
@@ -192,6 +181,7 @@ export default function FootballPredictionsBot() {
 
   const recommended = predictions.filter((p) => p.isLikelyOver25 || p.confidence >= 40)
   const highConfidence = predictions.filter((p) => p.confidence >= 60)
+  const stakeAvailable = predictions.filter((p) => p.isAvailableInStake)
 
   useEffect(() => {
     fetchPredictions()
@@ -206,7 +196,7 @@ export default function FootballPredictionsBot() {
             <Target className="h-10 w-10 text-blue-400" />
             PRONÓSTICO REAL
           </h1>
-          <p className="text-blue-200">Bot con API real - Máximo 5 pronósticos</p>
+          <p className="text-blue-200">Solo partidos disponibles en casas de apuestas</p>
           <div className="flex items-center justify-center gap-2 text-sm text-blue-300">
             <Clock className="h-4 w-4" />
             <span>Hora Colombia: {currentTime}</span>
@@ -237,18 +227,18 @@ export default function FootballPredictionsBot() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-white">{predictions.length}</div>
-              <p className="text-xs text-blue-300 mt-1">Máximo 5 por día</p>
+              <p className="text-xs text-blue-300 mt-1">En casas de apuestas</p>
             </CardContent>
           </Card>
 
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-white">Recomendados</CardTitle>
-              <Bot className="h-4 w-4 text-green-400" />
+              <CardTitle className="text-sm font-medium text-white">Disponibles en Stake</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-400">{recommended.length}</div>
-              <p className="text-xs text-green-300 mt-1">Confianza +40%</p>
+              <div className="text-2xl font-bold text-green-400">{stakeAvailable.length}</div>
+              <p className="text-xs text-green-300 mt-1">Casa preferida</p>
             </CardContent>
           </Card>
 
@@ -357,7 +347,7 @@ export default function FootballPredictionsBot() {
         {/* Información del sistema */}
         <div className="text-center">
           <Badge className="bg-blue-600 text-white px-4 py-2 text-sm">
-            🎯 API real con respaldo • Máximo 5 pronósticos • Rate limiting controlado
+            🎯 Solo partidos en casas de apuestas • Prioridad Stake • API real
           </Badge>
         </div>
 
@@ -369,17 +359,26 @@ export default function FootballPredictionsBot() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <Badge className="bg-blue-600 text-white">{prediction.league}</Badge>
-                    <Badge
-                      className={`${
-                        prediction.confidence >= 75
-                          ? "bg-green-700 text-green-100"
-                          : prediction.confidence >= 65
-                            ? "bg-yellow-700 text-yellow-100"
-                            : "bg-gray-700 text-gray-100"
-                      }`}
-                    >
-                      {prediction.confidence}% confianza
-                    </Badge>
+                    <div className="flex gap-2">
+                      <Badge
+                        className={`${
+                          prediction.confidence >= 75
+                            ? "bg-green-700 text-green-100"
+                            : prediction.confidence >= 65
+                              ? "bg-yellow-700 text-yellow-100"
+                              : "bg-gray-700 text-gray-100"
+                        }`}
+                      >
+                        {prediction.confidence}%
+                      </Badge>
+                      <Badge
+                        className={`${
+                          prediction.isAvailableInStake ? "bg-green-600 text-white" : "bg-orange-600 text-white"
+                        }`}
+                      >
+                        {prediction.bookmaker}
+                      </Badge>
+                    </div>
                   </div>
                   <CardTitle className="text-white text-lg">
                     {prediction.homeTeam} vs {prediction.awayTeam}
@@ -399,6 +398,30 @@ export default function FootballPredictionsBot() {
                         : prediction.predictedWinner === "away"
                           ? prediction.awayTeam
                           : "EMPATE"}
+                    </p>
+                  </div>
+
+                  {/* Disponibilidad en casas de apuestas */}
+                  <div
+                    className={`p-3 border rounded-lg ${
+                      prediction.isAvailableInStake
+                        ? "bg-green-900/30 border-green-700"
+                        : "bg-orange-900/30 border-orange-700"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp
+                        className={`h-4 w-4 ${prediction.isAvailableInStake ? "text-green-400" : "text-orange-400"}`}
+                      />
+                      <span
+                        className={`font-semibold ${prediction.isAvailableInStake ? "text-green-400" : "text-orange-400"}`}
+                      >
+                        Casa de Apuestas
+                      </span>
+                    </div>
+                    <p className="text-white font-bold">Disponible en: {prediction.bookmaker}</p>
+                    <p className={`text-sm ${prediction.isAvailableInStake ? "text-green-300" : "text-orange-300"}`}>
+                      {prediction.isAvailableInStake ? "✅ Disponible en Stake" : "⚠️ Verificar disponibilidad"}
                     </p>
                   </div>
 
@@ -458,91 +481,6 @@ export default function FootballPredictionsBot() {
                     <p className={`text-sm ${prediction.isLikelyOver25 ? "text-green-300" : "text-blue-300"}`}>
                       Probabilidad Over 2.5: {prediction.over25Pct}%
                     </p>
-                  </div>
-                  {/* Cuotas y Stake */}
-                  <div className="space-y-3">
-                    <h4 className="text-white font-semibold">💰 Cuotas y Apuesta:</h4>
-
-                    {/* Cuotas principales */}
-                    <div className="grid grid-cols-3 gap-2 text-sm">
-                      <div className="bg-slate-600 p-2 rounded text-center">
-                        <p className="text-blue-300">Local</p>
-                        <p className="text-white font-bold">{prediction.odds.homeWin}</p>
-                      </div>
-                      <div className="bg-slate-600 p-2 rounded text-center">
-                        <p className="text-blue-300">Empate</p>
-                        <p className="text-white font-bold">{prediction.odds.draw}</p>
-                      </div>
-                      <div className="bg-slate-600 p-2 rounded text-center">
-                        <p className="text-blue-300">Visitante</p>
-                        <p className="text-white font-bold">{prediction.odds.awayWin}</p>
-                      </div>
-                    </div>
-
-                    {/* Cuotas de goles */}
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="bg-green-900/30 border border-green-700 p-2 rounded text-center">
-                        <p className="text-green-300">Over 2.5</p>
-                        <p className="text-green-400 font-bold">{prediction.odds.over25}</p>
-                      </div>
-                      <div className="bg-red-900/30 border border-red-700 p-2 rounded text-center">
-                        <p className="text-red-300">Under 2.5</p>
-                        <p className="text-red-400 font-bold">{prediction.odds.under25}</p>
-                      </div>
-                    </div>
-
-                    {/* Stake recomendado */}
-                    <div
-                      className={`p-3 border rounded-lg ${
-                        prediction.stake.confidence === "high"
-                          ? "bg-green-900/30 border-green-700"
-                          : prediction.stake.confidence === "medium"
-                            ? "bg-yellow-900/30 border-yellow-700"
-                            : "bg-blue-900/30 border-blue-700"
-                      }`}
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <span
-                          className={`font-semibold ${
-                            prediction.stake.confidence === "high"
-                              ? "text-green-400"
-                              : prediction.stake.confidence === "medium"
-                                ? "text-yellow-400"
-                                : "text-blue-400"
-                          }`}
-                        >
-                          Stake Recomendado
-                        </span>
-                        <Badge
-                          className={`${
-                            prediction.stake.confidence === "high"
-                              ? "bg-green-700"
-                              : prediction.stake.confidence === "medium"
-                                ? "bg-yellow-700"
-                                : "bg-blue-700"
-                          }`}
-                        >
-                          {prediction.stake.confidence.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-300">Nivel</p>
-                          <p className="text-white font-bold">{prediction.stake.recommended}/10</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-300">Unidades</p>
-                          <p className="text-white font-bold">{prediction.stake.units}u</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-300">Valor</p>
-                          <p className={`font-bold ${prediction.value > 0 ? "text-green-400" : "text-red-400"}`}>
-                            {prediction.value > 0 ? "+" : ""}
-                            {prediction.value}%
-                          </p>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </CardContent>
               </Card>

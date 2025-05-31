@@ -14,19 +14,8 @@ interface MatchPrediction {
   awayWinProb: number
   predictedWinner: "home" | "away" | "draw"
   confidence: number
-  odds: {
-    homeWin: number
-    draw: number
-    awayWin: number
-    over25: number
-    under25: number
-  }
-  stake: {
-    recommended: number
-    units: number
-    confidence: string
-  }
-  value: number
+  bookmaker: string
+  isAvailableInStake: boolean
 }
 
 export async function POST(request: Request) {
@@ -61,7 +50,7 @@ export async function POST(request: Request) {
 
       let message = `🎯 **TOP 5 PRONÓSTICOS DEL DÍA** 🔥
 📅 ${new Date().toLocaleDateString("es-CO", { timeZone: "America/Bogota" })}
-⚡ Solo los mejores ${predictions.length} partidos
+🏠 Solo partidos en casas de apuestas
 
 `
 
@@ -75,6 +64,7 @@ export async function POST(request: Request) {
 
         const confidenceEmoji = prediction.confidence >= 75 ? "🔥" : prediction.confidence >= 65 ? "⚡" : "✅"
         const goalsEmoji = prediction.isLikelyOver25 ? "⚽🔥" : "🛡️"
+        const bookmakerEmoji = prediction.isAvailableInStake ? "🟢" : "🟡"
 
         message += `**${index + 1}.** ${confidenceEmoji} **${prediction.homeTeam} vs ${prediction.awayTeam}**
 🏆 ${prediction.league}
@@ -86,17 +76,17 @@ ${
     ? `${goalsEmoji} **OVER 2.5** (${prediction.over25Pct}% - ${prediction.avgGoals} goles)`
     : `🛡️ **Partido cerrado** (${prediction.avgGoals} goles)`
 }
-💰 **CUOTAS:** 1️⃣${prediction.odds.homeWin} | ❌${prediction.odds.draw} | 2️⃣${prediction.odds.awayWin}
-⚽ **GOLES:** Over2.5 ${prediction.odds.over25} | Under2.5 ${prediction.odds.under25}
-🎯 **STAKE:** ${prediction.stake.recommended}/10 (${prediction.stake.units}u) - ${prediction.stake.confidence.toUpperCase()}
-📈 **VALOR:** ${prediction.value > 0 ? "+" : ""}${prediction.value}%
+${bookmakerEmoji} **Casa:** ${prediction.bookmaker} ${prediction.isAvailableInStake ? "(Stake ✅)" : ""}
 
 `
       })
 
-      message += `⚠️ *Solo estadísticas puras - API real*
+      const stakeCount = predictions.filter((p) => p.isAvailableInStake).length
+
+      message += `🏠 **${predictions.length}** partidos en casas de apuestas
+🟢 **${stakeCount}** disponibles en Stake
+⚠️ *Solo estadísticas puras - API real*
 🔔 *Apuesta responsablemente*
-🎯 *Máximo 5 pronósticos de alta calidad*
 
 ---
 ⏰ **Enviado:** ${currentTime}`
